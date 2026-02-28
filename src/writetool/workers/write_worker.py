@@ -6,6 +6,7 @@ from PySide6.QtCore import Signal
 
 from writetool.core.exceptions import WriteCancelledError
 from writetool.core.writer_engine import WriteConfig, WriteProgress, WriterEngine
+from writetool.i18n import tr
 from writetool.platform.base import PlatformBackend
 from writetool.workers.base_worker import BaseWorker
 
@@ -42,7 +43,7 @@ class WriteWorker(BaseWorker):
             self.finished_ok.emit()
 
         except WriteCancelledError:
-            self._emit_log("Yazma işlemi iptal edildi.")
+            self._emit_log(tr("write.cancelled"))
             self.cancelled.emit()
 
         except Exception as e:

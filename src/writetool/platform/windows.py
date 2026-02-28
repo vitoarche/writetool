@@ -7,7 +7,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from writetool.core.exceptions import DriveError, DriveInUseError, FormatError
+from writetool.core.exceptions import DriveError, FormatError
+from writetool.i18n import tr
 from writetool.platform.base import DriveInfo, PlatformBackend
 
 
@@ -22,7 +23,7 @@ class WindowsBackend(PlatformBackend):
             check=False,
         )
         if result.returncode != 0:
-            raise DriveError(f"PowerShell hatası: {result.stderr.strip()}")
+            raise DriveError(tr("platform.powershell_error", error=result.stderr.strip()))
         return result.stdout.strip()
 
     def _diskpart(self, commands: list[str]) -> str:
@@ -41,7 +42,7 @@ class WindowsBackend(PlatformBackend):
                 check=False,
             )
             if result.returncode != 0:
-                raise FormatError(f"Diskpart hatası: {result.stderr.strip()}")
+                raise FormatError(tr("platform.diskpart_error", error=result.stderr.strip()))
             return result.stdout
         finally:
             Path(script_path).unlink(missing_ok=True)
@@ -131,7 +132,7 @@ class WindowsBackend(PlatformBackend):
             f"format fs=fat32 quick label={label}",
             "assign",
         ]
-        output = self._diskpart(commands)
+        self._diskpart(commands)
         return self._get_assigned_letter(disk_num)
 
     def format_drive_mbr_ntfs(self, drive: DriveInfo, label: str = "WRITETOOL") -> str:
@@ -178,7 +179,7 @@ class WindowsBackend(PlatformBackend):
 
         letters = [p["DriveLetter"] for p in parts if p.get("DriveLetter")]
         if len(letters) < 2:
-            raise FormatError("Dual partition oluşturuldu ama sürücü harfleri atanamadı.")
+            raise FormatError(tr("platform.dual_no_letters"))
         return f"{letters[0]}:\\", f"{letters[1]}:\\"
 
     def mount_partition(self, partition_device: str) -> Path:
@@ -211,5 +212,5 @@ class WindowsBackend(PlatformBackend):
         )
         letter = self._ps(script).strip()
         if not letter:
-            raise FormatError("Sürücü harfi atanamadı.")
+            raise FormatError(tr("platform.no_drive_letter"))
         return f"{letter}:\\"

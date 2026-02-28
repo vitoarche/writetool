@@ -25,6 +25,7 @@ from writetool.core.exceptions import (
     WriteToolError,
 )
 from writetool.core.wim_splitter import is_wimlib_available, split_wim
+from writetool.i18n import tr
 from writetool.platform.base import DriveInfo, PlatformBackend
 from writetool.utils.constants import (
     BOOT_MODE_LEGACY,
@@ -36,10 +37,10 @@ from writetool.utils.constants import (
     STAGE_COPY_FILES,
     STAGE_EJECT,
     STAGE_FORMAT,
-    STAGE_LABELS,
     STAGE_PROCESS_WIM,
     STAGE_UNMOUNT,
     STAGE_VERIFY,
+    get_stage_label,
 )
 
 
@@ -85,7 +86,7 @@ def _mount_iso(iso_path: Path) -> Path:
             check=False,
         )
         if result.returncode != 0:
-            raise ISOError(f"ISO mount hatası: {result.stderr.strip()}")
+            raise ISOError(tr("engine.iso_mount_error", error=result.stderr.strip()))
         # Parse mount point from output (last column of last line)
         for line in result.stdout.strip().splitlines():
             parts = line.split("\t")
@@ -93,7 +94,7 @@ def _mount_iso(iso_path: Path) -> Path:
                 mount_point = parts[-1].strip()
                 if mount_point and Path(mount_point).exists():
                     return Path(mount_point)
-        raise ISOError("ISO mount noktası bulunamadı.")
+        raise ISOError(tr("engine.iso_mount_not_found"))
 
     elif system == "Linux":
         mount_dir = Path(tempfile.mkdtemp(prefix="writetool_iso_"))
@@ -105,16 +106,17 @@ def _mount_iso(iso_path: Path) -> Path:
         )
         if result.returncode != 0:
             mount_dir.rmdir()
-            raise ISOError(f"ISO mount hatası: {result.stderr.strip()}")
+            raise ISOError(tr("engine.iso_mount_error", error=result.stderr.strip()))
         return mount_dir
 
     elif system == "Windows":
+        escaped = str(iso_path).replace("'", "''")
         result = subprocess.run(
             [
                 "powershell",
                 "-NoProfile",
                 "-Command",
-                f"(Mount-DiskImage -ImagePath '{iso_path}' -PassThru | "
+                f"(Mount-DiskImage -ImagePath '{escaped}' -PassThru | "
                 "Get-Volume).DriveLetter",
             ],
             capture_output=True,
@@ -122,11 +124,11 @@ def _mount_iso(iso_path: Path) -> Path:
             check=False,
         )
         if result.returncode != 0:
-            raise ISOError(f"ISO mount hatası: {result.stderr.strip()}")
+            raise ISOError(tr("engine.iso_mount_error", error=result.stderr.strip()))
         letter = result.stdout.strip()
         return Path(f"{letter}:\\")
 
-    raise ISOError(f"ISO mount desteklenmiyor: {system}")
+    raise ISOError(tr("engine.iso_unsupported", system=system))
 
 
 def _unmount_iso(mount_point: Path, iso_path: Path | None = None) -> None:
@@ -153,12 +155,13 @@ def _unmount_iso(mount_point: Path, iso_path: Path | None = None) -> None:
         mount_point.rmdir()
     elif system == "Windows":
         if iso_path:
+            escaped = str(iso_path).replace("'", "''")
             subprocess.run(
                 [
                     "powershell",
                     "-NoProfile",
                     "-Command",
-                    f"Dismount-DiskImage -ImagePath '{iso_path}'",
+                    f"Dismount-DiskImage -ImagePath '{escaped}'",
                 ],
                 capture_output=True,
                 check=False,
@@ -169,7 +172,10 @@ def _get_install_wim_size(iso_mount: Path) -> int:
     """Find install.wim or install.esd and return its size."""
     wim = _get_install_wim_path(iso_mount)
     if wim:
-        return wim.stat().st_size
+        try:
+            return wim.stat().st_size
+        except OSError:
+            return 0
     return 0
 
 
@@ -257,9 +263,9 @@ class WriterEngine:
 
         try:
             # Mount ISO natively
-            self._log("ISO mount ediliyor...")
+            self._log(tr("engine.mounting_iso"))
             iso_mount = _mount_iso(config.iso_path)
-            self._log(f"ISO mount: {iso_mount}")
+            self._log(tr("engine.iso_mount", path=iso_mount))
 
             # Analyze mounted ISO
             wim_size = _get_install_wim_size(iso_mount)
@@ -277,19 +283,19 @@ class WriterEngine:
 
             # Determine strategy
             strategy = self._resolve_strategy(config, is_wim_oversized)
-            self._log(f"Strateji: {strategy}")
+            self._log(tr("engine.strategy", strategy=strategy))
 
             # Stage 1: Unmount USB
             self._check_cancel()
             self._set_stage(STAGE_UNMOUNT, 0, 0)
-            self._log("Drive unmount ediliyor...")
+            self._log(tr("engine.unmounting_drive"))
             self._backend.unmount_drive(config.drive)
 
             # Stage 2: Format
             self._check_cancel()
             self._set_stage(STAGE_FORMAT, 0, 0)
             usb_mount, data_mount = self._format_drive(config, strategy)
-            self._log(f"USB mount: {usb_mount}")
+            self._log(tr("engine.usb_mount", path=usb_mount))
 
             # Stage 3: Copy files
             self._check_cancel()
@@ -308,22 +314,25 @@ class WriterEngine:
             if config.verify_after_write:
                 self._check_cancel()
                 self._set_stage(STAGE_VERIFY, 0, 0)
-                self._log("Doğrulanıyor...")
+                self._log(tr("engine.verifying"))
                 self._verify(usb_mount, has_efi)
 
             # Stage 6: Eject
             self._set_stage(STAGE_EJECT, 0, 0)
-            self._log("Eject ediliyor...")
+            self._log(tr("engine.ejecting"))
             try:
                 self._backend.eject_drive(config.drive)
             except WriteToolError:
-                self._log("Eject edilemedi, elle çıkarabilirsiniz.")
+                self._log(tr("engine.eject_failed"))
 
-            self._log("Yazma işlemi tamamlandı!")
+            self._log(tr("engine.write_complete"))
 
         finally:
             if iso_mount:
-                _unmount_iso(iso_mount, config.iso_path)
+                try:
+                    _unmount_iso(iso_mount, config.iso_path)
+                except Exception as e:
+                    self._log(f"ISO unmount warning: {e}")
 
     def _resolve_strategy(self, config: WriteConfig, is_wim_oversized: bool) -> str:
         if config.partition_strategy != PARTITION_AUTO:
@@ -338,19 +347,19 @@ class WriterEngine:
         self, config: WriteConfig, strategy: str
     ) -> tuple[Path, Path | None]:
         if config.boot_mode == BOOT_MODE_LEGACY:
-            self._log("Formatlanıyor: MBR + ExFAT...")
+            self._log(tr("engine.format_mbr_exfat"))
             part = self._backend.format_drive_mbr_ntfs(config.drive)
             mount = self._backend.mount_partition(part)
             return mount, None
 
         if strategy == PARTITION_DUAL:
-            self._log("Formatlanıyor: GPT + FAT32 (boot) + ExFAT (data)...")
+            self._log(tr("engine.format_gpt_dual"))
             boot_part, data_part = self._backend.format_drive_dual(config.drive)
             boot_mount = self._backend.mount_partition(boot_part)
             data_mount = self._backend.mount_partition(data_part)
             return boot_mount, data_mount
 
-        self._log("Formatlanıyor: GPT + FAT32...")
+        self._log(tr("engine.format_gpt_fat32"))
         part = self._backend.format_drive_gpt_fat32(config.drive)
         mount = self._backend.mount_partition(part)
         return mount, None
@@ -368,7 +377,7 @@ class WriterEngine:
         Uses 'cp' for reliability on macOS (rsync 2.x has FAT32 temp-file issues).
         Tracks progress by polling destination size.
         """
-        self._log("Dosyalar kopyalanıyor...")
+        self._log(tr("engine.copying_files"))
 
         # Build file list from ISO mount, excluding install.wim if needed
         skip_name = wim_path.name.lower() if (skip_wim and wim_path) else None
@@ -382,7 +391,7 @@ class WriterEngine:
 
             for fname in filenames:
                 if self._cancelled:
-                    raise WriteCancelledError("Kopyalama iptal edildi.")
+                    raise WriteCancelledError(tr("engine.copy_cancelled"))
 
                 # Skip install.wim if strategy requires separate handling
                 if skip_name and rel_dir.lower() == "sources" and fname.lower() == skip_name:
@@ -397,7 +406,7 @@ class WriterEngine:
                     shutil.copy2(str(src), str(dst))
                     bytes_copied += src_size
                 except OSError as e:
-                    self._log(f"UYARI: {fname} kopyalanamadı: {e}")
+                    self._log(tr("engine.copy_warning", fname=fname, error=e))
                     continue
 
                 # Emit progress every 20 files
@@ -406,12 +415,12 @@ class WriterEngine:
                     self._emit_copy_progress(min(pct, 99), fname, total_size)
 
         self._emit_copy_progress(100, "", total_size)
-        self._log(f"Dosya kopyalama tamamlandı ({file_count} dosya).")
+        self._log(tr("engine.copy_done", count=file_count))
 
     def _emit_copy_progress(self, pct: float, speed: str, total_size: int):
         progress = WriteProgress(
             stage=STAGE_COPY_FILES,
-            stage_label=STAGE_LABELS[STAGE_COPY_FILES],
+            stage_label=get_stage_label(STAGE_COPY_FILES),
             current_file=speed,
             bytes_written=int(total_size * pct / 100),
             total_bytes=total_size,
@@ -446,19 +455,19 @@ class WriterEngine:
     ) -> None:
         """Handle install.wim — split or copy to data partition."""
         if strategy == PARTITION_WIM_SPLIT:
-            self._log("install.wim bölünüyor (wimlib-imagex)...")
+            self._log(tr("engine.wim_splitting"))
             # Split directly from mounted ISO to USB — no temp copy needed
             sources_dir = usb_mount / "sources"
             sources_dir.mkdir(parents=True, exist_ok=True)
             swm_files = split_wim(wim_path, sources_dir)
-            self._log(f"WIM {len(swm_files)} parçaya bölündü.")
+            self._log(tr("engine.wim_split_done", count=len(swm_files)))
 
         elif strategy == PARTITION_DUAL and data_mount:
-            self._log("install.wim data partition'a kopyalanıyor...")
+            self._log(tr("engine.wim_copying_data"))
             data_sources = data_mount / "sources"
             data_sources.mkdir(parents=True, exist_ok=True)
             dest = data_sources / wim_path.name
-            self._log(f"rsync ile kopyalanıyor: {wim_path.name}...")
+            self._log(tr("engine.wim_rsync", name=wim_path.name))
             result = subprocess.run(
                 ["rsync", "-a", "--info=progress2", str(wim_path), str(dest)],
                 capture_output=True,
@@ -466,8 +475,8 @@ class WriterEngine:
                 check=False,
             )
             if result.returncode != 0:
-                raise WriteError(f"WIM kopyalama hatası: {result.stderr}")
-            self._log("install.wim kopyalandı.")
+                raise WriteError(tr("engine.wim_copy_error", error=result.stderr))
+            self._log(tr("engine.wim_copied"))
 
     def _verify(self, usb_mount: Path, has_efi: bool) -> None:
         checks = [
@@ -479,14 +488,14 @@ class WriterEngine:
 
         for path in checks:
             if not path.exists():
-                self._log(f"UYARI: Beklenen dosya/klasör bulunamadı: {path}")
+                self._log(tr("engine.verify_warning", path=path))
 
-        self._log("Doğrulama tamamlandı.")
+        self._log(tr("engine.verify_done"))
 
     def _set_stage(self, stage: str, current: int, total: int):
         progress = WriteProgress(
             stage=stage,
-            stage_label=STAGE_LABELS.get(stage, stage),
+            stage_label=get_stage_label(stage),
             bytes_written=current,
             total_bytes=total,
             percent=(current / total * 100) if total > 0 else 0,
@@ -500,4 +509,4 @@ class WriterEngine:
 
     def _check_cancel(self):
         if self._cancelled:
-            raise WriteCancelledError("Yazma işlemi kullanıcı tarafından iptal edildi.")
+            raise WriteCancelledError(tr("engine.cancel"))

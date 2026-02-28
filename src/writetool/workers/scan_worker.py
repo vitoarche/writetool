@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from PySide6.QtCore import Signal
 
-from writetool.platform.base import DriveInfo, PlatformBackend
+from writetool.i18n import tr
+from writetool.platform.base import PlatformBackend
 from writetool.workers.base_worker import BaseWorker
 
 
@@ -20,10 +21,10 @@ class ScanWorker(BaseWorker):
 
     def run(self):
         try:
-            self._emit_log("USB sürücüler taranıyor...")
+            self._emit_log(tr("scan.scanning"))
             drives = self._backend.list_usb_drives()
             self.drives_found.emit(drives)
-            self._emit_log(f"{len(drives)} USB sürücü bulundu.")
+            self._emit_log(tr("scan.found", count=len(drives)))
             self.finished_ok.emit()
         except Exception as e:
-            self.error.emit(f"USB tarama hatası: {e}")
+            self.error.emit(tr("scan.error", error=e))

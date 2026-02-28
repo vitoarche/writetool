@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from writetool.core.exceptions import DriveError, DriveInUseError, FormatError
+from writetool.i18n import tr
 from writetool.platform.base import DriveInfo, PlatformBackend
 
 
@@ -86,7 +87,7 @@ class LinuxBackend(PlatformBackend):
             # Ignore "not mounted" errors
             if result.returncode != 0 and "not mounted" not in result.stderr:
                 raise DriveInUseError(
-                    f"'{part}' unmount edilemedi: {result.stderr.strip()}"
+                    tr("platform.unmount_failed", device=part, error=result.stderr.strip())
                 )
 
         # Also try unmounting the device itself
@@ -145,7 +146,7 @@ class LinuxBackend(PlatformBackend):
         result = self._run(["mount", partition_device, str(mount_dir)], check=False)
         if result.returncode != 0:
             mount_dir.rmdir()
-            raise DriveError(f"Mount hatası: {result.stderr.strip()}")
+            raise DriveError(tr("platform.mount_error", error=result.stderr.strip()))
         return mount_dir
 
     def eject_drive(self, drive: DriveInfo) -> None:
@@ -169,5 +170,7 @@ class LinuxBackend(PlatformBackend):
     def _checked_run(self, cmd: list[str]) -> subprocess.CompletedProcess:
         result = self._run(cmd, check=False)
         if result.returncode != 0:
-            raise FormatError(f"Komut başarısız: {' '.join(cmd)}\n{result.stderr.strip()}")
+            raise FormatError(
+                tr("platform.command_failed", command=" ".join(cmd), error=result.stderr.strip())
+            )
         return result

@@ -7,6 +7,7 @@ from pathlib import Path
 from PySide6.QtCore import Signal
 
 from writetool.core.checksum import compute_checksum
+from writetool.i18n import tr
 from writetool.workers.base_worker import BaseWorker
 
 
@@ -23,7 +24,7 @@ class ChecksumWorker(BaseWorker):
 
     def run(self):
         try:
-            self._emit_log(f"{self._algorithm.upper()} hesaplanıyor...")
+            self._emit_log(tr("checksum.computing", algorithm=self._algorithm.upper()))
 
             def on_progress(read_bytes: int, total: int):
                 if total > 0:
@@ -37,11 +38,11 @@ class ChecksumWorker(BaseWorker):
             )
 
             if self._cancelled:
-                self._emit_log("Checksum hesaplama iptal edildi.")
+                self._emit_log(tr("checksum.cancelled"))
                 return
 
             self.checksum_ready.emit(self._algorithm, digest)
-            self._emit_log(f"{self._algorithm.upper()}: {digest}")
+            self._emit_log(tr("checksum.result", algorithm=self._algorithm.upper(), digest=digest))
             self.finished_ok.emit()
         except Exception as e:
-            self.error.emit(f"Checksum hatası: {e}")
+            self.error.emit(tr("checksum.error", error=e))

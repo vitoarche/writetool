@@ -34,15 +34,24 @@ STAGE_PROCESS_WIM = "process_wim"
 STAGE_VERIFY = "verify"
 STAGE_EJECT = "eject"
 
-STAGE_LABELS = {
-    STAGE_UNMOUNT: "Unmount ediliyor...",
-    STAGE_FORMAT: "Formatlanıyor...",
-    STAGE_EXTRACT_BOOT: "Boot dosyaları çıkarılıyor...",
-    STAGE_COPY_FILES: "Dosyalar kopyalanıyor...",
-    STAGE_PROCESS_WIM: "install.wim işleniyor...",
-    STAGE_VERIFY: "Doğrulanıyor...",
-    STAGE_EJECT: "Eject ediliyor...",
+_STAGE_TR_KEYS = {
+    STAGE_UNMOUNT: "stage.unmount",
+    STAGE_FORMAT: "stage.format",
+    STAGE_EXTRACT_BOOT: "stage.extract_boot",
+    STAGE_COPY_FILES: "stage.copy_files",
+    STAGE_PROCESS_WIM: "stage.process_wim",
+    STAGE_VERIFY: "stage.verify",
+    STAGE_EJECT: "stage.eject",
 }
+
+
+def get_stage_label(stage: str) -> str:
+    """Return the translated label for a pipeline stage."""
+    from writetool.i18n import tr
+    key = _STAGE_TR_KEYS.get(stage)
+    if key:
+        return tr(key)
+    return stage
 
 # install.wim path inside ISO
 INSTALL_WIM_PATH = "/sources/install.wim"

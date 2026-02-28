@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from writetool.core.writer_engine import WriteConfig
+from writetool.i18n import on_language_changed, tr
 from writetool.platform.base import DriveInfo, PlatformBackend
 from writetool.ui.dialogs import confirm_write, show_error, show_success
 from writetool.ui.drive_selector import DriveSelector
@@ -36,6 +37,7 @@ class MainWindow(QMainWindow):
         self._iso_path: Path | None = None
         self._setup_ui()
         self._connect_signals()
+        on_language_changed(self.retranslate)
 
         # Initial USB scan
         self._drive_selector.refresh()
@@ -76,19 +78,30 @@ class MainWindow(QMainWindow):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self._start_btn = QPushButton("Yazdırmaya Başla")
+        self._start_btn = QPushButton(tr("main.start_button"))
         self._start_btn.setObjectName("startButton")
         self._start_btn.setEnabled(False)
 
-        self._cancel_btn = QPushButton("İptal")
+        self._cancel_btn = QPushButton(tr("main.cancel_button"))
         self._cancel_btn.setObjectName("cancelButton")
         self._cancel_btn.setEnabled(False)
         self._cancel_btn.setVisible(False)
 
         btn_layout.addWidget(self._start_btn)
+        btn_layout.addSpacing(16)
         btn_layout.addWidget(self._cancel_btn)
         btn_layout.addStretch()
         main_layout.addLayout(btn_layout)
+
+        # Author label (bottom-right)
+        author_label = QLabel("author: arche")
+        author_label.setObjectName("authorLabel")
+        author_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        main_layout.addWidget(author_label)
+
+    def retranslate(self):
+        self._start_btn.setText(tr("main.start_button"))
+        self._cancel_btn.setText(tr("main.cancel_button"))
 
     def _connect_signals(self):
         self._iso_selector.iso_selected.connect(self._on_iso_selected)
@@ -141,7 +154,7 @@ class MainWindow(QMainWindow):
     def _on_cancel(self):
         if self._write_worker and self._write_worker.isRunning():
             self._write_worker.cancel()
-            self._progress_panel.append_log("İptal istendi...")
+            self._progress_panel.append_log(tr("main.cancel_requested"))
 
     def _on_stage_changed(self, stage_label: str, current_file: str):
         status = stage_label
@@ -152,17 +165,17 @@ class MainWindow(QMainWindow):
     def _on_write_finished(self):
         self._set_writing_state(False)
         self._progress_panel.set_progress(100)
-        self._progress_panel.set_status("Tamamlandı!")
+        self._progress_panel.set_status(tr("main.completed"))
         show_success(self)
 
     def _on_write_cancelled(self):
         self._set_writing_state(False)
-        self._progress_panel.set_status("İptal edildi.")
+        self._progress_panel.set_status(tr("main.cancelled"))
 
     def _on_write_error(self, message: str):
         self._set_writing_state(False)
-        self._progress_panel.set_status(f"Hata: {message}")
-        show_error(self, "Yazma Hatası", message)
+        self._progress_panel.set_status(tr("main.error_status", message=message))
+        show_error(self, tr("main.write_error_title"), message)
 
     def _set_writing_state(self, writing: bool):
         """Toggle UI elements based on whether writing is in progress."""

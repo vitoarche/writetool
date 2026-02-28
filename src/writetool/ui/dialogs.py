@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QMessageBox, QWidget
 
+from writetool.i18n import tr
 from writetool.platform.base import DriveInfo
 from writetool.utils.formatting import format_size
 
@@ -15,21 +16,24 @@ def confirm_write(parent: QWidget, drive: DriveInfo, iso_name: str) -> bool:
     """
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Warning)
-    msg.setWindowTitle("Yazma Onayı")
+    msg.setWindowTitle(tr("dialog.confirm_title"))
     msg.setText(
-        f"<b>{drive.display_name}</b> üzerindeki TÜM VERİLER SİLİNECEK!"
+        tr("dialog.confirm_warning", drive_name=drive.display_name)
     )
     msg.setInformativeText(
-        f"<b>{iso_name}</b> dosyası <b>{drive.name}</b> "
-        f"({format_size(drive.size)}) sürücüsüne yazılacak.\n\n"
-        "Bu işlem geri alınamaz. Devam etmek istiyor musunuz?"
+        tr(
+            "dialog.confirm_detail",
+            iso_name=iso_name,
+            name=drive.name,
+            size=format_size(drive.size),
+        )
     )
     msg.setStandardButtons(
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
     )
     msg.setDefaultButton(QMessageBox.StandardButton.No)
-    msg.button(QMessageBox.StandardButton.Yes).setText("Evet, Yazdır")
-    msg.button(QMessageBox.StandardButton.No).setText("İptal")
+    msg.button(QMessageBox.StandardButton.Yes).setText(tr("dialog.confirm_yes"))
+    msg.button(QMessageBox.StandardButton.No).setText(tr("dialog.confirm_no"))
 
     return msg.exec() == QMessageBox.StandardButton.Yes
 
@@ -58,8 +62,8 @@ def show_success(parent: QWidget) -> None:
     """Show a write-complete success dialog."""
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Information)
-    msg.setWindowTitle("Tamamlandı")
-    msg.setText("USB yazma işlemi başarıyla tamamlandı!")
-    msg.setInformativeText("USB sürücüyü güvenle çıkarabilirsiniz.")
+    msg.setWindowTitle(tr("dialog.success_title"))
+    msg.setText(tr("dialog.success_message"))
+    msg.setInformativeText(tr("dialog.success_detail"))
     msg.setStandardButtons(QMessageBox.StandardButton.Ok)
     msg.exec()

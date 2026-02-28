@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 
 from writetool.core.wim_splitter import is_wimlib_available
+from writetool.i18n import on_language_changed, tr
 from writetool.utils.constants import (
     BOOT_MODE_LEGACY,
     BOOT_MODE_UEFI,
@@ -25,24 +26,25 @@ class SettingsPanel(QGroupBox):
     """Panel for boot mode and partition strategy selection."""
 
     def __init__(self, parent=None):
-        super().__init__("Seçenekler", parent)
+        super().__init__(tr("settings.group_title"), parent)
         self._setup_ui()
+        on_language_changed(self.retranslate)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
 
         # Boot mode
         boot_row = QHBoxLayout()
-        boot_label = QLabel("Boot:")
-        self._uefi_radio = QRadioButton("UEFI")
-        self._legacy_radio = QRadioButton("Legacy BIOS")
+        self._boot_label = QLabel(tr("settings.boot_label"))
+        self._uefi_radio = QRadioButton(tr("settings.boot_uefi"))
+        self._legacy_radio = QRadioButton(tr("settings.boot_legacy"))
         self._uefi_radio.setChecked(True)
 
         self._boot_group = QButtonGroup(self)
         self._boot_group.addButton(self._uefi_radio)
         self._boot_group.addButton(self._legacy_radio)
 
-        boot_row.addWidget(boot_label)
+        boot_row.addWidget(self._boot_label)
         boot_row.addWidget(self._uefi_radio)
         boot_row.addWidget(self._legacy_radio)
         boot_row.addStretch()
@@ -50,10 +52,10 @@ class SettingsPanel(QGroupBox):
 
         # Partition strategy
         part_row = QHBoxLayout()
-        part_label = QLabel("Partition:")
-        self._auto_radio = QRadioButton("Otomatik")
-        self._wim_split_radio = QRadioButton("WIM Böl")
-        self._dual_radio = QRadioButton("Çift Partition")
+        self._part_label = QLabel(tr("settings.partition_label"))
+        self._auto_radio = QRadioButton(tr("settings.partition_auto"))
+        self._wim_split_radio = QRadioButton(tr("settings.partition_wim_split"))
+        self._dual_radio = QRadioButton(tr("settings.partition_dual"))
         self._auto_radio.setChecked(True)
 
         self._part_group = QButtonGroup(self)
@@ -64,18 +66,26 @@ class SettingsPanel(QGroupBox):
         # Disable WIM split if wimlib not available
         if not is_wimlib_available():
             self._wim_split_radio.setEnabled(False)
-            self._wim_split_radio.setToolTip(
-                "wimlib-imagex bulunamadı. Kurulum:\n"
-                "  macOS: brew install wimlib\n"
-                "  Linux: sudo apt install wimtools"
-            )
+            self._wim_split_radio.setToolTip(tr("settings.wimlib_missing"))
 
-        part_row.addWidget(part_label)
+        part_row.addWidget(self._part_label)
         part_row.addWidget(self._auto_radio)
         part_row.addWidget(self._wim_split_radio)
         part_row.addWidget(self._dual_radio)
         part_row.addStretch()
         layout.addLayout(part_row)
+
+    def retranslate(self):
+        self.setTitle(tr("settings.group_title"))
+        self._boot_label.setText(tr("settings.boot_label"))
+        self._uefi_radio.setText(tr("settings.boot_uefi"))
+        self._legacy_radio.setText(tr("settings.boot_legacy"))
+        self._part_label.setText(tr("settings.partition_label"))
+        self._auto_radio.setText(tr("settings.partition_auto"))
+        self._wim_split_radio.setText(tr("settings.partition_wim_split"))
+        self._dual_radio.setText(tr("settings.partition_dual"))
+        if not is_wimlib_available():
+            self._wim_split_radio.setToolTip(tr("settings.wimlib_missing"))
 
     def get_boot_mode(self) -> str:
         if self._legacy_radio.isChecked():

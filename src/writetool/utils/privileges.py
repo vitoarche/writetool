@@ -13,7 +13,7 @@ def is_admin() -> bool:
         return os.geteuid() == 0
     elif system == "Windows":
         import ctypes
-        return ctypes.windll.shell32.IsUserAnAdmin() != 0
+        return ctypes.windll.shell32.IsUserAnAdmin() != 0  # type: ignore[attr-defined]
     return False
 
 
@@ -28,7 +28,11 @@ def request_elevation() -> bool:
     system = platform.system()
     # Build the full command preserving PYTHONPATH so editable installs work
     python = sys.executable
-    args = [python, "-m", "writetool"]
+    if getattr(sys, "frozen", False):
+        # PyInstaller frozen app — re-run the binary itself
+        args = [python, "--skip-lang"]
+    else:
+        args = [python, "-m", "writetool", "--skip-lang"]
 
     if system == "Darwin":
         # Use osascript to prompt for admin; pass PYTHONPATH for editable installs
@@ -37,16 +41,19 @@ def request_elevation() -> bool:
         if site_dir and site_dir not in pythonpath:
             pythonpath = f"{site_dir}:{pythonpath}" if pythonpath else site_dir
         env_prefix = f"PYTHONPATH={pythonpath} " if pythonpath else ""
-        cmd_str = env_prefix + " ".join(args)
+        # Run elevated command in background (&) so osascript returns immediately
+        # after auth succeeds; if user cancels, osascript exits with error code.
+        cmd_str = env_prefix + " ".join(args) + " &"
         try:
-            subprocess.Popen(
+            result = subprocess.run(
                 [
                     "osascript",
                     "-e",
                     f'do shell script "{cmd_str}" with administrator privileges',
-                ]
+                ],
+                capture_output=True,
             )
-            return True
+            return result.returncode == 0
         except OSError:
             return False
 
@@ -63,9 +70,14 @@ def request_elevation() -> bool:
 
     elif system == "Windows":
         import ctypes
-        ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", python, "-m writetool", None, 1
-        )
+        if getattr(sys, "frozen", False):
+            ctypes.windll.shell32.ShellExecuteW(  # type: ignore[attr-defined]
+                None, "runas", python, "--skip-lang", None, 1
+            )
+        else:
+            ctypes.windll.shell32.ShellExecuteW(  # type: ignore[attr-defined]
+                None, "runas", f'"{python}"', "-m writetool --skip-lang", None, 1
+            )
         return True
 
     return False

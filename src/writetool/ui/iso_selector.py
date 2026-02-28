@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from writetool.utils.formatting import truncate_hash
+from writetool.i18n import on_language_changed, tr
 from writetool.workers.checksum_worker import ChecksumWorker
 
 
@@ -26,46 +26,63 @@ class ISOSelector(QGroupBox):
     checksum_ready = Signal(str, str)  # (algorithm, digest)
 
     def __init__(self, parent=None):
-        super().__init__("ISO Dosyası", parent)
+        super().__init__(tr("iso.group_title"), parent)
         self._iso_path: Path | None = None
         self._checksum_worker: ChecksumWorker | None = None
         self._setup_ui()
+        on_language_changed(self.retranslate)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setSpacing(10)
 
         # File path row
         path_row = QHBoxLayout()
+        path_row.setSpacing(20)
         self._path_edit = QLineEdit()
-        self._path_edit.setPlaceholderText("Windows ISO dosyasını seçin...")
+        self._path_edit.setPlaceholderText(tr("iso.placeholder"))
         self._path_edit.setReadOnly(True)
 
-        self._browse_btn = QPushButton("Gözat...")
+        self._browse_btn = QPushButton(tr("iso.browse"))
         self._browse_btn.clicked.connect(self._on_browse)
 
         path_row.addWidget(self._path_edit, 1)
         path_row.addWidget(self._browse_btn)
         layout.addLayout(path_row)
-
-        # Checksum row
-        checksum_row = QHBoxLayout()
-        self._checksum_label = QLabel("SHA256: —")
+        # Checksum label
+        self._checksum_label = QLabel(tr("iso.checksum_none"))
         self._checksum_label.setObjectName("checksumLabel")
+        layout.addWidget(self._checksum_label)
 
-        self._verify_btn = QPushButton("Doğrula")
+        # Verify row — same layout as path row
+        verify_row = QHBoxLayout()
+        verify_row.setSpacing(20)
+        self._checksum_edit = QLineEdit()
+        self._checksum_edit.setReadOnly(True)
+        self._checksum_edit.setPlaceholderText("SHA256")
+
+        self._verify_btn = QPushButton(tr("iso.verify"))
         self._verify_btn.setEnabled(False)
         self._verify_btn.clicked.connect(self._on_verify)
 
-        checksum_row.addWidget(self._checksum_label, 1)
-        checksum_row.addWidget(self._verify_btn)
-        layout.addLayout(checksum_row)
+        verify_row.addWidget(self._checksum_edit, 1)
+        verify_row.addWidget(self._verify_btn)
+        layout.addLayout(verify_row)
+
+    def retranslate(self):
+        self.setTitle(tr("iso.group_title"))
+        self._path_edit.setPlaceholderText(tr("iso.placeholder"))
+        self._browse_btn.setText(tr("iso.browse"))
+        self._verify_btn.setText(tr("iso.verify"))
+        if not self._iso_path:
+            self._checksum_label.setText(tr("iso.checksum_none"))
 
     def _on_browse(self):
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "ISO Dosyası Seç",
+            tr("iso.file_dialog_title"),
             "",
-            "ISO Dosyaları (*.iso);;Tüm Dosyalar (*)",
+            tr("iso.file_filter"),
         )
         if path:
             self.set_iso_path(Path(path))
@@ -75,7 +92,8 @@ class ISOSelector(QGroupBox):
         self._iso_path = path
         self._path_edit.setText(str(path))
         self._verify_btn.setEnabled(True)
-        self._checksum_label.setText("SHA256: hesaplanıyor...")
+        self._checksum_label.setText(tr("iso.checksum_computing"))
+        self._checksum_edit.clear()
         self.iso_selected.emit(path)
 
         # Start background checksum
@@ -100,12 +118,15 @@ class ISOSelector(QGroupBox):
         self._checksum_worker.start()
 
     def _on_checksum_done(self, algorithm: str, digest: str):
-        self._checksum_label.setText(f"SHA256: {truncate_hash(digest, 24)}")
-        self._checksum_label.setToolTip(digest)
+        self._checksum_label.setText("SHA256:")
+        self._checksum_edit.setText(digest)
+        self._checksum_edit.setToolTip(digest)
         self.checksum_ready.emit(algorithm, digest)
 
     def _on_checksum_error(self, message: str):
-        self._checksum_label.setText(f"SHA256: hata — {message}")
+        self._checksum_label.setText(tr("iso.checksum_error", message=message))
+        self._checksum_edit.clear()
 
     def _on_checksum_progress(self, percent: float):
-        self._checksum_label.setText(f"SHA256: hesaplanıyor... {percent:.0f}%")
+        self._checksum_label.setText(tr("iso.checksum_progress", percent=percent))
+        self._checksum_edit.clear()

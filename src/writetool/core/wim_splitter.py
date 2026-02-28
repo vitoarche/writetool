@@ -17,14 +17,11 @@ def is_wimlib_available() -> bool:
 
 def get_wimlib_path() -> str:
     """Return the path to wimlib-imagex, or raise if not found."""
+    from writetool.i18n import tr
+
     path = shutil.which("wimlib-imagex")
     if path is None:
-        raise WimlibNotFoundError(
-            "wimlib-imagex bulunamadı. Lütfen wimlib paketini kurun:\n"
-            "  macOS:   brew install wimlib\n"
-            "  Linux:   sudo apt install wimtools\n"
-            "  Windows: https://wimlib.net/downloads/"
-        )
+        raise WimlibNotFoundError(tr("wim.not_found"))
     return path
 
 
@@ -45,6 +42,8 @@ def split_wim(
     Returns:
         List of paths to the generated .swm files.
     """
+    from writetool.i18n import tr
+
     wimlib = get_wimlib_path()
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -64,11 +63,11 @@ def split_wim(
     )
 
     if result.returncode != 0:
-        raise WimError(f"WIM bölme hatası: {result.stderr.strip()}")
+        raise WimError(tr("wim.split_error", error=result.stderr.strip()))
 
     # Collect output files: install.swm, install2.swm, install3.swm, ...
     swm_files = sorted(output_dir.glob(f"{output_name}*.swm"))
     if not swm_files:
-        raise WimError("WIM bölme sonrası .swm dosyaları bulunamadı.")
+        raise WimError(tr("wim.no_swm_files"))
 
     return swm_files

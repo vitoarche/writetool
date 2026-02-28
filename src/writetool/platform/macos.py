@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import plistlib
 import subprocess
-import tempfile
 from pathlib import Path
 
 from writetool.core.exceptions import DriveError, DriveInUseError, FormatError
+from writetool.i18n import tr
 from writetool.platform.base import DriveInfo, PlatformBackend
 
 
@@ -71,7 +71,7 @@ class MacOSBackend(PlatformBackend):
             )
             if result.returncode != 0:
                 raise DriveInUseError(
-                    f"'{drive.device}' unmount edilemedi: {result.stderr.strip()}"
+                    tr("platform.unmount_failed", device=drive.device, error=result.stderr.strip())
                 )
 
     def format_drive_gpt_fat32(self, drive: DriveInfo, label: str = "WRITETOOL") -> str:
@@ -80,7 +80,7 @@ class MacOSBackend(PlatformBackend):
             check=False,
         )
         if result.returncode != 0:
-            raise FormatError(f"Format hatası: {result.stderr.strip()}")
+            raise FormatError(tr("platform.format_error", error=result.stderr.strip()))
 
         # GPT creates: s1=EFI, s2=data. Find the data partition by label.
         return self._find_partition_by_label(drive.device, label)
@@ -92,7 +92,7 @@ class MacOSBackend(PlatformBackend):
             check=False,
         )
         if result.returncode != 0:
-            raise FormatError(f"Format hatası: {result.stderr.strip()}")
+            raise FormatError(tr("platform.format_error", error=result.stderr.strip()))
         # MBR: data partition is s1
         return self._find_partition_by_label(drive.device, label)
 
@@ -116,7 +116,7 @@ class MacOSBackend(PlatformBackend):
             check=False,
         )
         if result.returncode != 0:
-            raise FormatError(f"Dual format hatası: {result.stderr.strip()}")
+            raise FormatError(tr("platform.dual_format_error", error=result.stderr.strip()))
 
         boot_part = self._find_partition_by_label(drive.device, boot_label)
         data_part = self._find_partition_by_label(drive.device, data_label)
@@ -130,12 +130,12 @@ class MacOSBackend(PlatformBackend):
 
         result = self._run(["diskutil", "mount", partition_device], check=False)
         if result.returncode != 0:
-            raise DriveError(f"Mount hatası: {result.stderr.strip()}")
+            raise DriveError(tr("platform.mount_error", error=result.stderr.strip()))
 
         mp = self._get_mount_point(partition_device)
         if mp:
             return mp
-        raise DriveError(f"Mount noktası bulunamadı: {partition_device}")
+        raise DriveError(tr("platform.mount_not_found", device=partition_device))
 
     def _get_mount_point(self, partition_device: str) -> Path | None:
         """Get the mount point of a partition, or None if not mounted."""
@@ -174,12 +174,12 @@ class MacOSBackend(PlatformBackend):
             except (subprocess.CalledProcessError, plistlib.InvalidFileException):
                 continue
 
-        raise FormatError(f"'{label}' etiketli partition bulunamadı: {device}")
+        raise FormatError(tr("platform.partition_not_found", label=label, device=device))
 
     def eject_drive(self, drive: DriveInfo) -> None:
         result = self._run(["diskutil", "eject", drive.device], check=False)
         if result.returncode != 0:
-            raise DriveError(f"Eject hatası: {result.stderr.strip()}")
+            raise DriveError(tr("platform.eject_error", error=result.stderr.strip()))
 
     def open_terminal_command(self, command: str) -> str:
         return f'osascript -e \'do shell script "{command}" with administrator privileges\''

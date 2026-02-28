@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QGroupBox,
     QLabel,
@@ -11,13 +10,16 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from writetool.i18n import on_language_changed, tr
+
 
 class ProgressPanel(QGroupBox):
     """Widget showing write progress and log output."""
 
     def __init__(self, parent=None):
-        super().__init__("İlerleme", parent)
+        super().__init__(tr("progress.group_title"), parent)
         self._setup_ui()
+        on_language_changed(self.retranslate)
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
@@ -40,6 +42,9 @@ class ProgressPanel(QGroupBox):
         self._log_edit.setReadOnly(True)
         self._log_edit.setMaximumHeight(150)
         layout.addWidget(self._log_edit)
+
+    def retranslate(self):
+        self.setTitle(tr("progress.group_title"))
 
     def set_progress(self, percent: float):
         """Set progress bar value (0-100)."""

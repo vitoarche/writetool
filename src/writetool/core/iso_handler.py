@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -11,8 +9,8 @@ from typing import Callable
 import pycdlib
 
 from writetool.core.exceptions import InvalidISOError, ISONotFoundError
+from writetool.i18n import tr
 from writetool.utils.constants import (
-    COPY_BUFFER_SIZE,
     FAT32_MAX_FILE_SIZE,
     INSTALL_ESD_PATH,
     INSTALL_WIM_PATH,
@@ -36,7 +34,7 @@ class ISOHandler:
 
     def __init__(self, iso_path: Path):
         if not iso_path.exists():
-            raise ISONotFoundError(f"ISO bulunamadı: {iso_path}")
+            raise ISONotFoundError(tr("iso.not_found_error", path=iso_path))
         self.iso_path = iso_path
         self._iso: pycdlib.PyCdlib | None = None
 
@@ -47,7 +45,7 @@ class ISOHandler:
             self._iso.open(str(self.iso_path))
         except Exception as e:
             self._iso = None
-            raise InvalidISOError(f"Geçersiz ISO dosyası: {e}") from e
+            raise InvalidISOError(tr("iso.invalid_error", error=e)) from e
 
     def close(self) -> None:
         """Close the ISO file."""
