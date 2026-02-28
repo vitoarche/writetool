@@ -5,8 +5,20 @@ build-backend = "hatchling.build"
 [project]
 name = "writetool"
 version = "0.1.0"
-description = "Windows USB Installer Creator"
+description = "Cross-platform Windows USB Installer Creator"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "arche" }]
 requires-python = ">=3.10"
+keywords = ["usb", "windows", "installer", "iso", "bootable"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Installation/Setup",
+]
 dependencies = [
     "PySide6>=6.6.0",
     "pycdlib>=1.14.0",
