@@ -9,7 +9,12 @@ from writetool.platform.base import DriveInfo
 from writetool.utils.formatting import format_size
 
 
-def confirm_write(parent: QWidget, drive: DriveInfo, iso_name: str) -> bool:
+def confirm_write(
+    parent: QWidget,
+    drive: DriveInfo,
+    iso_name: str,
+    is_dd_mode: bool = False,
+) -> bool:
     """Show a confirmation dialog before writing.
 
     Returns True if the user confirms.
@@ -20,14 +25,17 @@ def confirm_write(parent: QWidget, drive: DriveInfo, iso_name: str) -> bool:
     msg.setText(
         tr("dialog.confirm_warning", drive_name=drive.display_name)
     )
-    msg.setInformativeText(
-        tr(
-            "dialog.confirm_detail",
-            iso_name=iso_name,
-            name=drive.name,
-            size=format_size(drive.size),
-        )
+
+    detail = tr(
+        "dialog.confirm_detail",
+        iso_name=iso_name,
+        name=drive.name,
+        size=format_size(drive.size),
     )
+    if is_dd_mode:
+        detail += "\n\n" + tr("dialog.dd_warning")
+
+    msg.setInformativeText(detail)
     msg.setStandardButtons(
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
     )

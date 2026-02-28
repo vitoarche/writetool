@@ -30,11 +30,17 @@ from writetool.platform.base import DriveInfo, PlatformBackend
 from writetool.utils.constants import (
     BOOT_MODE_LEGACY,
     BOOT_MODE_UEFI,
+    DD_BLOCK_SIZE,
     FAT32_MAX_FILE_SIZE,
+    ISO_TYPE_LINUX,
+    ISO_TYPE_MACOS,
+    ISO_TYPE_UNKNOWN,
+    ISO_TYPE_WINDOWS,
     PARTITION_AUTO,
     PARTITION_DUAL,
     PARTITION_WIM_SPLIT,
     STAGE_COPY_FILES,
+    STAGE_DD_WRITE,
     STAGE_EJECT,
     STAGE_FORMAT,
     STAGE_PROCESS_WIM,
@@ -53,6 +59,7 @@ class WriteConfig:
     boot_mode: str = BOOT_MODE_UEFI
     partition_strategy: str = PARTITION_AUTO
     verify_after_write: bool = True
+    iso_type: str = ISO_TYPE_UNKNOWN
 
 
 @dataclass
@@ -257,8 +264,97 @@ class WriterEngine:
         return self._cancelled
 
     def write(self, config: WriteConfig) -> None:
-        """Execute the full write pipeline."""
+        """Execute the full write pipeline.
+
+        Routes to DD write for Linux/macOS ISOs, or Windows pipeline
+        for Windows ISOs.
+        """
         self._cancelled = False
+
+        iso_type = config.iso_type
+
+        # Detect ISO type via pycdlib if not already set
+        if iso_type in (ISO_TYPE_UNKNOWN, ""):
+            from writetool.core.iso_handler import ISOHandler
+            with ISOHandler(config.iso_path) as handler:
+                info = handler.get_info()
+                iso_type = info.iso_type
+
+        self._log(tr("engine.iso_type_detected", iso_type=iso_type))
+
+        # Edge case: .dmg files only supported on macOS
+        if config.iso_path.suffix.lower() == ".dmg" and platform.system() != "Darwin":
+            raise WriteError(tr("engine.dmg_not_supported"))
+
+        # Edge case: ISO size > drive size
+        iso_file_size = config.iso_path.stat().st_size
+        if iso_file_size > config.drive.size:
+            from writetool.utils.formatting import format_size
+            raise WriteError(
+                tr(
+                    "engine.drive_too_small",
+                    iso_size=format_size(iso_file_size),
+                    drive_size=format_size(config.drive.size),
+                )
+            )
+
+        if iso_type in (ISO_TYPE_LINUX, ISO_TYPE_MACOS):
+            self._write_dd(config)
+        elif iso_type == ISO_TYPE_UNKNOWN:
+            self._log(tr("engine.unknown_iso_fallback"))
+            self._write_dd(config)
+        else:
+            self._write_windows(config)
+
+    def _write_dd(self, config: WriteConfig) -> None:
+        """DD raw write pipeline for Linux/macOS ISOs."""
+        # Stage 1: Unmount USB
+        self._check_cancel()
+        self._set_stage(STAGE_UNMOUNT, 0, 0)
+        self._log(tr("engine.unmounting_drive"))
+        self._backend.unmount_drive(config.drive)
+
+        # Stage 2: DD write
+        self._check_cancel()
+        total_size = config.iso_path.stat().st_size
+        self._set_stage(STAGE_DD_WRITE, 0, total_size)
+        self._log(tr("engine.dd_writing"))
+
+        self._backend.dd_write(
+            source_path=config.iso_path,
+            drive=config.drive,
+            block_size=DD_BLOCK_SIZE,
+            progress_callback=self._dd_progress_callback,
+            cancel_check=lambda: self._cancelled,
+        )
+
+        self._log(tr("engine.dd_write_complete"))
+
+        # Stage 3: Eject
+        self._set_stage(STAGE_EJECT, 0, 0)
+        self._log(tr("engine.ejecting"))
+        try:
+            self._backend.eject_drive(config.drive)
+        except WriteToolError:
+            self._log(tr("engine.eject_failed"))
+
+        self._log(tr("engine.write_complete"))
+
+    def _dd_progress_callback(self, bytes_written: int, total_bytes: int) -> None:
+        pct = (bytes_written / total_bytes * 100) if total_bytes > 0 else 0
+        progress = WriteProgress(
+            stage=STAGE_DD_WRITE,
+            stage_label=get_stage_label(STAGE_DD_WRITE),
+            current_file="",
+            bytes_written=bytes_written,
+            total_bytes=total_bytes,
+            percent=min(pct, 100),
+        )
+        if self._progress_cb:
+            self._progress_cb(progress)
+
+    def _write_windows(self, config: WriteConfig) -> None:
+        """Windows ISO write pipeline (mount, format, copy, WIM, verify, eject)."""
         iso_mount: Path | None = None
 
         try:

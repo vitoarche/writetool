@@ -23,6 +23,7 @@ STRINGS: dict[str, str] = {
     "dialog.confirm_detail": "<b>{iso_name}</b> dosyası <b>{name}</b> ({size}) sürücüsüne yazılacak.\n\nBu işlem geri alınamaz. Devam etmek istiyor musunuz?",
     "dialog.confirm_yes": "Evet, Yazdır",
     "dialog.confirm_no": "İptal",
+    "dialog.dd_warning": "Bu imaj ham blok kopyalama (DD modu) ile yazılacak. Tüm sürücü imaj içeriğiyle üzerine yazılacaktır.",
     "dialog.success_title": "Tamamlandı",
     "dialog.success_message": "USB yazma işlemi başarıyla tamamlandı!",
     "dialog.success_detail": "USB sürücüyü güvenle çıkarabilirsiniz.",
@@ -38,12 +39,12 @@ STRINGS: dict[str, str] = {
 
     # -- iso_selector.py --
     "iso.group_title": "ISO Dosyası",
-    "iso.placeholder": "Windows ISO dosyasını seçin...",
+    "iso.placeholder": "ISO dosyasını seçin...",
     "iso.browse": "Gözat...",
     "iso.checksum_none": "SHA256: —",
     "iso.verify": "Doğrula",
     "iso.file_dialog_title": "ISO Dosyası Seç",
-    "iso.file_filter": "ISO Dosyaları (*.iso);;Tüm Dosyalar (*)",
+    "iso.file_filter": "Disk İmajları (*.iso *.dmg *.img);;ISO Dosyaları (*.iso);;Tüm Dosyalar (*)",
     "iso.checksum_computing": "SHA256: hesaplanıyor...",
     "iso.checksum_result": "SHA256: {hash}",
     "iso.checksum_error": "SHA256: hata — {message}",
@@ -60,6 +61,13 @@ STRINGS: dict[str, str] = {
     "settings.partition_dual": "Çift Partition",
     "settings.wimlib_missing": "wimlib-imagex bulunamadı. Kurulum:\n  macOS: brew install wimlib\n  Linux: sudo apt install wimtools",
     "settings.language_label": "Dil:",
+    "settings.iso_type_label": "ISO Türü:",
+    "settings.iso_type_windows": "Windows",
+    "settings.iso_type_linux": "Linux",
+    "settings.iso_type_macos": "macOS",
+    "settings.iso_type_unknown": "Bilinmiyor",
+    "settings.iso_type_detecting": "Algılanıyor...",
+    "settings.dd_note": "Bu imaj ham blok kopyalama (DD) ile yazılacak. Boot modu ve bölüm seçenekleri uygulanmaz.",
 
     # -- progress_panel.py --
     "progress.group_title": "İlerleme",
@@ -70,6 +78,7 @@ STRINGS: dict[str, str] = {
     "stage.extract_boot": "Boot dosyaları çıkarılıyor...",
     "stage.copy_files": "Dosyalar kopyalanıyor...",
     "stage.process_wim": "install.wim işleniyor...",
+    "stage.dd_write": "İmaj yazılıyor...",
     "stage.verify": "Doğrulanıyor...",
     "stage.eject": "Eject ediliyor...",
 
@@ -101,6 +110,13 @@ STRINGS: dict[str, str] = {
     "engine.iso_mount_error": "ISO mount hatası: {error}",
     "engine.iso_mount_not_found": "ISO mount noktası bulunamadı.",
     "engine.iso_unsupported": "ISO mount desteklenmiyor: {system}",
+    "engine.iso_type_detected": "ISO türü: {iso_type}",
+    "engine.dd_writing": "Ham imaj USB'ye yazılıyor...",
+    "engine.dd_write_complete": "Ham imaj yazma tamamlandı.",
+    "engine.dd_cancelled": "İmaj yazma iptal edildi.",
+    "engine.drive_too_small": "Sürücü çok küçük: ISO {iso_size} ama sürücü sadece {drive_size}.",
+    "engine.dmg_not_supported": "DMG dosyaları yalnızca macOS'ta yazılabilir.",
+    "engine.unknown_iso_fallback": "Bilinmeyen ISO türü — ham yazma (DD) kullanılıyor.",
     "engine.ejecting": "Eject ediliyor...",
 
     # -- wim_splitter.py --

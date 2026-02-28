@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Callable
 
-from writetool.core.exceptions import DriveError, FormatError
+from writetool.core.exceptions import DriveError, FormatError, WriteCancelledError
 from writetool.i18n import tr
 from writetool.platform.base import DriveInfo, PlatformBackend
 
@@ -185,6 +187,31 @@ class WindowsBackend(PlatformBackend):
     def mount_partition(self, partition_device: str) -> Path:
         # On Windows, partitions are already mounted with drive letters
         return Path(partition_device)
+
+    def dd_write(
+        self,
+        source_path: Path,
+        drive: DriveInfo,
+        block_size: int,
+        progress_callback: Callable[[int, int], None] | None = None,
+        cancel_check: Callable[[], bool] | None = None,
+    ) -> None:
+        total_size = source_path.stat().st_size
+        bytes_written = 0
+
+        with open(source_path, "rb") as src, open(drive.device, "wb") as dst:
+            while True:
+                if cancel_check and cancel_check():
+                    raise WriteCancelledError(tr("engine.dd_cancelled"))
+                chunk = src.read(block_size)
+                if not chunk:
+                    break
+                dst.write(chunk)
+                bytes_written += len(chunk)
+                if progress_callback:
+                    progress_callback(bytes_written, total_size)
+            dst.flush()
+            os.fsync(dst.fileno())
 
     def eject_drive(self, drive: DriveInfo) -> None:
         disk_num = self._disk_number(drive)

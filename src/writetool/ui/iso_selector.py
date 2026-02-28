@@ -24,6 +24,7 @@ class ISOSelector(QGroupBox):
 
     iso_selected = Signal(Path)  # Emitted when a valid ISO is chosen
     checksum_ready = Signal(str, str)  # (algorithm, digest)
+    iso_type_detected = Signal(str)  # Emitted with detected ISO type
 
     def __init__(self, parent=None):
         super().__init__(tr("iso.group_title"), parent)

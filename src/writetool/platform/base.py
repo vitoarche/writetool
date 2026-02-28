@@ -5,6 +5,7 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 
 @dataclass
@@ -64,6 +65,25 @@ class PlatformBackend(abc.ABC):
     @abc.abstractmethod
     def eject_drive(self, drive: DriveInfo) -> None:
         """Safely eject the drive."""
+
+    @abc.abstractmethod
+    def dd_write(
+        self,
+        source_path: Path,
+        drive: DriveInfo,
+        block_size: int,
+        progress_callback: Callable[[int, int], None] | None = None,
+        cancel_check: Callable[[], bool] | None = None,
+    ) -> None:
+        """Write a raw image file to a drive using block copy.
+
+        Args:
+            source_path: Path to the ISO/IMG file to write.
+            drive: Target drive info.
+            block_size: Block size for read/write operations.
+            progress_callback: Called with (bytes_written, total_bytes).
+            cancel_check: If returns True, abort the write.
+        """
 
     @abc.abstractmethod
     def open_terminal_command(self, command: str) -> str:

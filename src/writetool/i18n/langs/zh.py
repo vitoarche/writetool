@@ -23,6 +23,7 @@ STRINGS: dict[str, str] = {
     "dialog.confirm_detail": "<b>{iso_name}</b> 将写入 <b>{name}</b>（{size}）。\n\n此操作不可撤销。是否继续？",
     "dialog.confirm_yes": "确认写入",
     "dialog.confirm_no": "取消",
+    "dialog.dd_warning": "此映像将使用原始块复制（DD 模式）写入。整个驱动器将被映像内容覆盖。",
     "dialog.success_title": "完成",
     "dialog.success_message": "USB 写入成功完成！",
     "dialog.success_detail": "您可以安全地弹出 USB 驱动器。",
@@ -38,12 +39,12 @@ STRINGS: dict[str, str] = {
 
     # -- iso_selector.py --
     "iso.group_title": "ISO 文件",
-    "iso.placeholder": "选择 Windows ISO 文件...",
+    "iso.placeholder": "选择 ISO 文件...",
     "iso.browse": "浏览...",
     "iso.checksum_none": "SHA256：—",
     "iso.verify": "验证",
     "iso.file_dialog_title": "选择 ISO 文件",
-    "iso.file_filter": "ISO 文件 (*.iso);;所有文件 (*)",
+    "iso.file_filter": "磁盘映像 (*.iso *.dmg *.img);;ISO 文件 (*.iso);;所有文件 (*)",
     "iso.checksum_computing": "SHA256：计算中...",
     "iso.checksum_result": "SHA256：{hash}",
     "iso.checksum_error": "SHA256：错误 — {message}",
@@ -60,6 +61,13 @@ STRINGS: dict[str, str] = {
     "settings.partition_dual": "双分区",
     "settings.wimlib_missing": "未找到 wimlib-imagex。安装方法：\n  macOS：brew install wimlib\n  Linux：sudo apt install wimtools",
     "settings.language_label": "语言：",
+    "settings.iso_type_label": "ISO 类型：",
+    "settings.iso_type_windows": "Windows",
+    "settings.iso_type_linux": "Linux",
+    "settings.iso_type_macos": "macOS",
+    "settings.iso_type_unknown": "未知",
+    "settings.iso_type_detecting": "检测中...",
+    "settings.dd_note": "此映像将使用原始块复制（DD）写入。启动模式和分区选项不适用。",
 
     # -- progress_panel.py --
     "progress.group_title": "进度",
@@ -70,6 +78,7 @@ STRINGS: dict[str, str] = {
     "stage.extract_boot": "正在提取启动文件...",
     "stage.copy_files": "正在复制文件...",
     "stage.process_wim": "正在处理 install.wim...",
+    "stage.dd_write": "正在写入映像...",
     "stage.verify": "正在验证...",
     "stage.eject": "正在弹出...",
 
@@ -101,6 +110,13 @@ STRINGS: dict[str, str] = {
     "engine.iso_mount_error": "ISO 挂载错误：{error}",
     "engine.iso_mount_not_found": "未找到 ISO 挂载点。",
     "engine.iso_unsupported": "不支持 ISO 挂载：{system}",
+    "engine.iso_type_detected": "ISO 类型：{iso_type}",
+    "engine.dd_writing": "正在将原始映像写入 USB...",
+    "engine.dd_write_complete": "原始映像写入完成。",
+    "engine.dd_cancelled": "映像写入已取消。",
+    "engine.drive_too_small": "驱动器太小：ISO 为 {iso_size}，但驱动器仅有 {drive_size}。",
+    "engine.dmg_not_supported": "DMG 文件仅在 macOS 上支持。",
+    "engine.unknown_iso_fallback": "未知 ISO 类型 — 使用原始写入（DD）。",
     "engine.ejecting": "正在弹出...",
 
     # -- wim_splitter.py --

@@ -23,6 +23,7 @@ STRINGS: dict[str, str] = {
     "dialog.confirm_detail": "<b>{iso_name}</b> wird auf <b>{name}</b> ({size}) geschrieben.\n\nDieser Vorgang kann nicht rückgängig gemacht werden. Fortfahren?",
     "dialog.confirm_yes": "Ja, schreiben",
     "dialog.confirm_no": "Abbrechen",
+    "dialog.dd_warning": "Dieses Image wird per Raw-Blockkopie (DD-Modus) geschrieben. Das gesamte Laufwerk wird mit dem Image-Inhalt überschrieben.",
     "dialog.success_title": "Abgeschlossen",
     "dialog.success_message": "USB-Schreibvorgang erfolgreich abgeschlossen!",
     "dialog.success_detail": "Sie können das USB-Laufwerk sicher entfernen.",
@@ -38,12 +39,12 @@ STRINGS: dict[str, str] = {
 
     # -- iso_selector.py --
     "iso.group_title": "ISO-Datei",
-    "iso.placeholder": "Windows-ISO-Datei auswählen...",
+    "iso.placeholder": "ISO-Datei auswählen...",
     "iso.browse": "Durchsuchen...",
     "iso.checksum_none": "SHA256: —",
     "iso.verify": "Prüfen",
     "iso.file_dialog_title": "ISO-Datei auswählen",
-    "iso.file_filter": "ISO-Dateien (*.iso);;Alle Dateien (*)",
+    "iso.file_filter": "Disk-Images (*.iso *.dmg *.img);;ISO-Dateien (*.iso);;Alle Dateien (*)",
     "iso.checksum_computing": "SHA256: wird berechnet...",
     "iso.checksum_result": "SHA256: {hash}",
     "iso.checksum_error": "SHA256: Fehler — {message}",
@@ -60,6 +61,13 @@ STRINGS: dict[str, str] = {
     "settings.partition_dual": "Doppelte Partition",
     "settings.wimlib_missing": "wimlib-imagex nicht gefunden. Installation:\n  macOS: brew install wimlib\n  Linux: sudo apt install wimtools",
     "settings.language_label": "Sprache:",
+    "settings.iso_type_label": "ISO-Typ:",
+    "settings.iso_type_windows": "Windows",
+    "settings.iso_type_linux": "Linux",
+    "settings.iso_type_macos": "macOS",
+    "settings.iso_type_unknown": "Unbekannt",
+    "settings.iso_type_detecting": "Erkennung...",
+    "settings.dd_note": "Dieses Image wird per Raw-Blockkopie (DD) geschrieben. Boot-Modus und Partitionsoptionen gelten nicht.",
 
     # -- progress_panel.py --
     "progress.group_title": "Fortschritt",
@@ -70,6 +78,7 @@ STRINGS: dict[str, str] = {
     "stage.extract_boot": "Boot-Dateien werden extrahiert...",
     "stage.copy_files": "Dateien werden kopiert...",
     "stage.process_wim": "install.wim wird verarbeitet...",
+    "stage.dd_write": "Image wird geschrieben...",
     "stage.verify": "Wird überprüft...",
     "stage.eject": "Wird ausgeworfen...",
 
@@ -101,6 +110,13 @@ STRINGS: dict[str, str] = {
     "engine.iso_mount_error": "ISO-Einhängefehler: {error}",
     "engine.iso_mount_not_found": "ISO-Einhängepunkt nicht gefunden.",
     "engine.iso_unsupported": "ISO-Einhängen nicht unterstützt: {system}",
+    "engine.iso_type_detected": "ISO-Typ: {iso_type}",
+    "engine.dd_writing": "Raw-Image wird auf USB geschrieben...",
+    "engine.dd_write_complete": "Raw-Image-Schreibvorgang abgeschlossen.",
+    "engine.dd_cancelled": "Image-Schreibvorgang abgebrochen.",
+    "engine.drive_too_small": "Laufwerk zu klein: ISO ist {iso_size}, aber Laufwerk hat nur {drive_size}.",
+    "engine.dmg_not_supported": "DMG-Dateien werden nur auf macOS unterstützt.",
+    "engine.unknown_iso_fallback": "Unbekannter ISO-Typ — verwende Raw-Schreibmodus (DD).",
     "engine.ejecting": "Wird ausgeworfen...",
 
     # -- wim_splitter.py --

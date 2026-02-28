@@ -22,7 +22,8 @@ from writetool.ui.drive_selector import DriveSelector
 from writetool.ui.iso_selector import ISOSelector
 from writetool.ui.progress_panel import ProgressPanel
 from writetool.ui.settings_panel import SettingsPanel
-from writetool.utils.constants import APP_TITLE
+from writetool.utils.constants import APP_TITLE, ISO_TYPE_LINUX, ISO_TYPE_MACOS, ISO_TYPE_UNKNOWN, ISO_TYPE_WINDOWS
+from writetool.workers.iso_info_worker import ISOInfoWorker
 from writetool.workers.write_worker import WriteWorker
 
 
@@ -33,8 +34,10 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self._backend = backend
         self._write_worker: WriteWorker | None = None
+        self._iso_info_worker: ISOInfoWorker | None = None
         self._selected_drive: DriveInfo | None = None
         self._iso_path: Path | None = None
+        self._iso_type: str = ISO_TYPE_UNKNOWN
         self._setup_ui()
         self._connect_signals()
         on_language_changed(self.retranslate)
@@ -111,7 +114,32 @@ class MainWindow(QMainWindow):
 
     def _on_iso_selected(self, path: Path):
         self._iso_path = path
+        self._iso_type = ISO_TYPE_UNKNOWN
         self._update_start_button()
+        self._start_iso_analysis(path)
+
+    def _start_iso_analysis(self, path: Path):
+        """Start background ISO type detection."""
+        if self._iso_info_worker and self._iso_info_worker.isRunning():
+            self._iso_info_worker.cancel()
+            self._iso_info_worker.wait()
+
+        self._settings_panel.set_detecting()
+        self._iso_info_worker = ISOInfoWorker(path, self)
+        self._iso_info_worker.info_ready.connect(self._on_iso_info)
+        self._iso_info_worker.error.connect(self._on_iso_info_error)
+        self._iso_info_worker.start()
+
+    def _on_iso_info(self, info):
+        """Handle ISO analysis result."""
+        self._iso_type = info.iso_type
+        self._settings_panel.set_iso_type(info.iso_type)
+        self._iso_selector.iso_type_detected.emit(info.iso_type)
+
+    def _on_iso_info_error(self, message: str):
+        """Handle ISO analysis error — default to unknown."""
+        self._iso_type = ISO_TYPE_UNKNOWN
+        self._settings_panel.set_iso_type(ISO_TYPE_UNKNOWN)
 
     def _on_drive_selected(self, drive: DriveInfo | None):
         self._selected_drive = drive
@@ -125,8 +153,10 @@ class MainWindow(QMainWindow):
         if not self._iso_path or not self._selected_drive:
             return
 
+        is_dd = self._iso_type in (ISO_TYPE_LINUX, ISO_TYPE_MACOS, ISO_TYPE_UNKNOWN)
+
         # Confirm
-        if not confirm_write(self, self._selected_drive, self._iso_path.name):
+        if not confirm_write(self, self._selected_drive, self._iso_path.name, is_dd_mode=is_dd):
             return
 
         # Build config
@@ -135,6 +165,7 @@ class MainWindow(QMainWindow):
             drive=self._selected_drive,
             boot_mode=self._settings_panel.get_boot_mode(),
             partition_strategy=self._settings_panel.get_partition_strategy(),
+            iso_type=self._iso_type,
         )
 
         # UI state: writing

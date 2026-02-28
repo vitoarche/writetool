@@ -23,6 +23,7 @@ STRINGS: dict[str, str] = {
     "dialog.confirm_detail": "<b>{iso_name}</b> will be written to <b>{name}</b> ({size}).\n\nThis operation cannot be undone. Do you want to continue?",
     "dialog.confirm_yes": "Yes, Write",
     "dialog.confirm_no": "Cancel",
+    "dialog.dd_warning": "This image will be written using raw block copy (DD mode). The entire drive will be overwritten with the image contents.",
     "dialog.success_title": "Completed",
     "dialog.success_message": "USB write completed successfully!",
     "dialog.success_detail": "You can safely eject the USB drive.",
@@ -38,12 +39,12 @@ STRINGS: dict[str, str] = {
 
     # -- iso_selector.py --
     "iso.group_title": "ISO File",
-    "iso.placeholder": "Select a Windows ISO file...",
+    "iso.placeholder": "Select an ISO file...",
     "iso.browse": "Browse...",
     "iso.checksum_none": "SHA256: —",
     "iso.verify": "Verify",
     "iso.file_dialog_title": "Select ISO File",
-    "iso.file_filter": "ISO Files (*.iso);;All Files (*)",
+    "iso.file_filter": "Disk Images (*.iso *.dmg *.img);;ISO Files (*.iso);;All Files (*)",
     "iso.checksum_computing": "SHA256: computing...",
     "iso.checksum_result": "SHA256: {hash}",
     "iso.checksum_error": "SHA256: error — {message}",
@@ -60,6 +61,13 @@ STRINGS: dict[str, str] = {
     "settings.partition_dual": "Dual Partition",
     "settings.wimlib_missing": "wimlib-imagex not found. Install:\n  macOS: brew install wimlib\n  Linux: sudo apt install wimtools",
     "settings.language_label": "Language:",
+    "settings.iso_type_label": "ISO Type:",
+    "settings.iso_type_windows": "Windows",
+    "settings.iso_type_linux": "Linux",
+    "settings.iso_type_macos": "macOS",
+    "settings.iso_type_unknown": "Unknown",
+    "settings.iso_type_detecting": "Detecting...",
+    "settings.dd_note": "This image will be written using raw block copy (DD). Boot mode and partition options do not apply.",
 
     # -- progress_panel.py --
     "progress.group_title": "Progress",
@@ -70,6 +78,7 @@ STRINGS: dict[str, str] = {
     "stage.extract_boot": "Extracting boot files...",
     "stage.copy_files": "Copying files...",
     "stage.process_wim": "Processing install.wim...",
+    "stage.dd_write": "Writing image...",
     "stage.verify": "Verifying...",
     "stage.eject": "Ejecting...",
 
@@ -101,6 +110,13 @@ STRINGS: dict[str, str] = {
     "engine.iso_mount_error": "ISO mount error: {error}",
     "engine.iso_mount_not_found": "ISO mount point not found.",
     "engine.iso_unsupported": "ISO mounting not supported: {system}",
+    "engine.iso_type_detected": "ISO type: {iso_type}",
+    "engine.dd_writing": "Writing raw image to USB...",
+    "engine.dd_write_complete": "Raw image write completed.",
+    "engine.dd_cancelled": "Image write cancelled.",
+    "engine.drive_too_small": "Drive too small: ISO is {iso_size} but drive is only {drive_size}.",
+    "engine.dmg_not_supported": "DMG files can only be written on macOS.",
+    "engine.unknown_iso_fallback": "Unknown ISO type — falling back to raw write (DD).",
     "engine.ejecting": "Ejecting...",
 
     # -- wim_splitter.py --

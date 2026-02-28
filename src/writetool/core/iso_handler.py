@@ -14,12 +14,16 @@ from writetool.utils.constants import (
     FAT32_MAX_FILE_SIZE,
     INSTALL_ESD_PATH,
     INSTALL_WIM_PATH,
+    ISO_TYPE_LINUX,
+    ISO_TYPE_MACOS,
+    ISO_TYPE_UNKNOWN,
+    ISO_TYPE_WINDOWS,
 )
 
 
 @dataclass
 class ISOInfo:
-    """Information about a Windows ISO file."""
+    """Information about an ISO file."""
 
     path: Path
     total_size: int
@@ -27,10 +31,36 @@ class ISOInfo:
     install_wim_size: int  # 0 if not found
     has_efi_boot: bool
     is_wim_oversized: bool  # install.wim > 4GB
+    iso_type: str = ISO_TYPE_UNKNOWN
+
+
+_WINDOWS_MARKERS = {"/sources/install.wim", "/sources/install.esd"}
+_MACOS_MARKERS = {"/basesystem.dmg", "/installesd.dmg", "/system/library/"}
+_LINUX_MARKERS = {"/isolinux/", "/casper/", "/liveos/", "/.disk/info", "/boot/grub/"}
+
+
+def _detect_iso_type(paths: set[str]) -> str:
+    """Detect ISO type from a set of lowercase file/directory paths."""
+    # Windows: has install.wim or install.esd
+    for marker in _WINDOWS_MARKERS:
+        if any(p == marker or p.startswith(marker + "/") for p in paths):
+            return ISO_TYPE_WINDOWS
+
+    # macOS: has basesystem.dmg, installesd.dmg, or system/library/
+    for marker in _MACOS_MARKERS:
+        if any(p == marker or p.startswith(marker) for p in paths):
+            return ISO_TYPE_MACOS
+
+    # Linux: has isolinux/, casper/, liveos/, .disk/info, or boot/grub/
+    for marker in _LINUX_MARKERS:
+        if any(p == marker or p.startswith(marker) for p in paths):
+            return ISO_TYPE_LINUX
+
+    return ISO_TYPE_UNKNOWN
 
 
 class ISOHandler:
-    """Reads and extracts files from a Windows ISO image."""
+    """Reads and extracts files from an ISO image."""
 
     def __init__(self, iso_path: Path):
         if not iso_path.exists():
@@ -67,24 +97,33 @@ class ISOHandler:
         file_count = 0
         install_wim_size = 0
         has_efi = False
+        all_paths: set[str] = set()
 
         facade = self._get_facade(iso)
 
-        for dirpath, _, filenames in facade.walk("/"):
+        for dirpath, dirnames, filenames in facade.walk("/"):
+            # Collect directory paths for type detection
+            for dname in dirnames:
+                all_paths.add(self._join_path(dirpath, dname).lower() + "/")
+
             for fname in filenames:
                 file_count += 1
                 full_path = self._join_path(dirpath, fname)
+                lower = full_path.lower()
+                all_paths.add(lower)
+
                 try:
                     size = self._file_size(iso, facade, full_path)
                     total_size += size
                 except Exception:
                     continue
 
-                lower = full_path.lower()
                 if lower == INSTALL_WIM_PATH or lower == INSTALL_ESD_PATH:
                     install_wim_size = size
                 if "/efi/boot/bootx64.efi" in lower:
                     has_efi = True
+
+        iso_type = _detect_iso_type(all_paths)
 
         return ISOInfo(
             path=self.iso_path,
@@ -93,6 +132,7 @@ class ISOHandler:
             install_wim_size=install_wim_size,
             has_efi_boot=has_efi,
             is_wim_oversized=install_wim_size > FAT32_MAX_FILE_SIZE,
+            iso_type=iso_type,
         )
 
     def extract_all(

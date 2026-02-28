@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import plistlib
 import subprocess
 from pathlib import Path
+from typing import Callable
 
-from writetool.core.exceptions import DriveError, DriveInUseError, FormatError
+from writetool.core.exceptions import DriveError, DriveInUseError, FormatError, WriteCancelledError
 from writetool.i18n import tr
 from writetool.platform.base import DriveInfo, PlatformBackend
 
@@ -175,6 +177,33 @@ class MacOSBackend(PlatformBackend):
                 continue
 
         raise FormatError(tr("platform.partition_not_found", label=label, device=device))
+
+    def dd_write(
+        self,
+        source_path: Path,
+        drive: DriveInfo,
+        block_size: int,
+        progress_callback: Callable[[int, int], None] | None = None,
+        cancel_check: Callable[[], bool] | None = None,
+    ) -> None:
+        # Use /dev/rdiskN for unbuffered raw access (much faster)
+        raw_device = drive.device.replace("/dev/disk", "/dev/rdisk")
+        total_size = source_path.stat().st_size
+        bytes_written = 0
+
+        with open(source_path, "rb") as src, open(raw_device, "wb") as dst:
+            while True:
+                if cancel_check and cancel_check():
+                    raise WriteCancelledError(tr("engine.dd_cancelled"))
+                chunk = src.read(block_size)
+                if not chunk:
+                    break
+                dst.write(chunk)
+                bytes_written += len(chunk)
+                if progress_callback:
+                    progress_callback(bytes_written, total_size)
+            dst.flush()
+            os.fsync(dst.fileno())
 
     def eject_drive(self, drive: DriveInfo) -> None:
         result = self._run(["diskutil", "eject", drive.device], check=False)
