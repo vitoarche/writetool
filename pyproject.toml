@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "writetool"
+version = "0.1.0"
+description = "Windows USB Installer Creator"
+requires-python = ">=3.10"
+dependencies = [
+    "PySide6>=6.6.0",
+    "pycdlib>=1.14.0",
+    "psutil>=5.9.0",
+]
+
+[project.scripts]
+writetool = "writetool.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/writetool"]
